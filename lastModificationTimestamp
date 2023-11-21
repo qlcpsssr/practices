@@ -1,0 +1,71 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract EnhancedStorageETH {
+    address public owner;
+    string public storedData;
+    uint256 public lastModificationTimestamp;
+    bool public isLocked;
+
+    mapping(address => bool) public readers;
+
+    event DataStored(address indexed user, string data, uint256 timestamp);
+    event DataDeleted(address indexed deleter);
+    event ReaderAdded(address indexed reader);
+    event ReaderRemoved(address indexed reader);
+    event ContractLocked();
+    event ContractUnlocked();
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only the owner can call this function");
+        _;
+    }
+
+    modifier notLocked() {
+        require(!isLocked, "Contract is locked and data cannot be modified");
+        _;
+    }
+
+    constructor() {
+        owner = msg.sender;
+        lastModificationTimestamp = block.timestamp;
+        isLocked = false;
+        readers[owner] = true; // Owner is initially a reader
+    }
+
+    function set(string memory newData) external onlyOwner notLocked {
+        storedData = newData;
+        lastModificationTimestamp = block.timestamp;
+        emit DataStored(msg.sender, newData, lastModificationTimestamp);
+    }
+
+    function get() external view returns (string memory) {
+        return storedData;
+    }
+
+    function deleteData() external onlyOwner notLocked {
+        delete storedData;
+        emit DataDeleted(msg.sender);
+    }
+
+    function lockContract() external onlyOwner {
+        isLocked = true;
+        emit ContractLocked();
+    }
+
+    function unlockContract() external onlyOwner {
+        isLocked = false;
+        emit ContractUnlocked();
+    }
+
+    function addReader(address newReader) external onlyOwner {
+        readers[newReader] = true;
+        emit ReaderAdded(newReader);
+    }
+
+    function removeReader(address readerToRemove) external onlyOwner {
+        require(readerToRemove != owner, "Owner cannot be removed as a reader");
+        readers[readerToRemove] = false;
+        emit ReaderRemoved(readerToRemove);
+    }
+}
